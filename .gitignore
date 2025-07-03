@@ -1,0 +1,21 @@
+# Environment configs
+.env
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Dependencies
+node_modules/
+
+# Editor settings
+.vscode/
+!.vscode/extensions.json
+
+
