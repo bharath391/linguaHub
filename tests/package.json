@@ -1,0 +1,16 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "main": "auth.test.js",
+  "scripts": {
+    "test": "jest --runInBand"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "LinguaHub tests",
+  "devDependencies": {
+    "axios": "^1.10.0",
+    "jest": "^30.0.4"
+  }
+}
