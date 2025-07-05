@@ -1,0 +1,63 @@
+name: Build Backend and Frontend
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Backend Setup
+      - name: Setup Node.js (Backend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Backend dependencies
+        working-directory: backend
+        run: npm install
+
+      # Install wait-on to wait for server readiness
+      - name: Install wait-on
+        run: npm install -g wait-on
+
+      # Start server in background
+      - name: Start Backend Server
+        working-directory: backend
+        run: npm run start &
+
+      # Wait for server to be ready
+      - name: Wait for server to be ready
+        run: wait-on http://localhost:3000
+
+      # Backend Tests
+      - name: Install Test dependencies
+        working-directory: tests
+        run: npm install
+
+      - name: Run Backend Tests
+        working-directory: tests
+        run: npm run test
+
+      # Frontend Setup
+      - name: Setup Node.js (Frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
