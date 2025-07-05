@@ -1,0 +1,49 @@
+name: Build Backend and Frontend
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build Backend
+      - name: Setup Node.js (Backend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Backend dependencies
+        working-directory: backend
+        run: npm install
+        #no build needed for my js only backend so i use just install dependencies to check and run the server and tests
+
+      - name: Run Backend Tests
+        working-directory: tests
+        run: npm run test
+
+      - name : Run Backend Server
+        working-directory: backend
+        run: npm run start 
+
+      # Build Frontend
+      - name: Setup Node.js (Frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
