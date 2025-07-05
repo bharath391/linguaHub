@@ -16,25 +16,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Build Backend
+      # Backend Setup
       - name: Setup Node.js (Backend)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Install Backend dependencies
         working-directory: backend
         run: npm install
-        #no build needed for my js only backend so i use just install dependencies to check and run the server and tests
+
+      # Install wait-on to wait for server readiness
+      - name: Install wait-on
+        run: npm install -g wait-on
+
+      # Start server in background
+      - name: Start Backend Server
+        working-directory: backend
+        run: npm run start &
+
+      # Wait for server to be ready
+      - name: Wait for server to be ready
+        run: wait-on http://localhost:3000
+
+      # Backend Tests
+      - name: Install Test dependencies
+        working-directory: tests
+        run: npm install
 
       - name: Run Backend Tests
         working-directory: tests
         run: npm run test
 
-      - name : Run Backend Server
-        working-directory: backend
-        run: npm run start 
-
-      # Build Frontend
+      # Frontend Setup
       - name: Setup Node.js (Frontend)
         uses: actions/setup-node@v4
         with:
