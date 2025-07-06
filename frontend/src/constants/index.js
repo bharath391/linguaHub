@@ -18,7 +18,6 @@ export const THEMES = [
     name: "retro",
     label: "VHS Tape",
     colors: ["#e4d8b4", "#ea6962", "#6aaa64", "#282425"],
-
   },
   {
     name: "cyberpunk",
