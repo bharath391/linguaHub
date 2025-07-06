@@ -30,14 +30,21 @@ jobs:
       - name: Install wait-on
         run: npm install -g wait-on
 
-      # Start server in background
+      # Start Backend Server
       - name: Start Backend Server
         working-directory: backend
         run: npm run start &
+        env:
+          PORT: 5001
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
 
       # Wait for server to be ready
       - name: Wait for server to be ready
-        run: wait-on http://localhost:3000
+        run: wait-on http://localhost:5001
 
       # Backend Tests
       - name: Install Test dependencies
@@ -47,6 +54,13 @@ jobs:
       - name: Run Backend Tests
         working-directory: tests
         run: npm run test
+        env:
+          PORT: 5001
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
 
       # Frontend Setup
       - name: Setup Node.js (Frontend)
@@ -61,3 +75,5 @@ jobs:
       - name: Build Frontend
         working-directory: frontend
         run: npm run build
+        env:
+          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
