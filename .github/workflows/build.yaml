@@ -2,78 +2,131 @@ name: Build Backend and Frontend
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # Backend Setup
-      - name: Setup Node.js (Backend)
+      
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
       - name: Install Backend dependencies
         working-directory: backend
-        run: npm install
-
-      # Install wait-on to wait for server readiness
-      - name: Install wait-on
-        run: npm install -g wait-on
-
-      # Start Backend Server
-      - name: Start Backend Server
+        run: npm ci
+      
+      # Run backend unit tests without starting server
+      - name: Run Backend Unit Tests
         working-directory: backend
-        run: npm run start &
+        run: npm run test:unit || npm run test
+        env:
+          NODE_ENV: test
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+  
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Run Frontend Tests
+        working-directory: frontend
+        run: npm test -- --coverage --watchAll=false
+        if: hashFiles('frontend/src/**/*.test.*') != ''
+      
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
+  
+  integration:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: hashFiles('tests/package.json') != ''
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Backend dependencies
+        working-directory: backend
+        run: npm ci
+      
+      - name: Install Test dependencies
+        working-directory: tests
+        run: npm ci
+      
+      - name: Start Backend Server for Integration Tests
+        working-directory: backend
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+          
+          # Wait for server with timeout
+          timeout=30
+          elapsed=0
+          while ! curl -s http://localhost:5001/health > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Server failed to start"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+          echo "Server ready for integration tests"
         env:
           PORT: 5001
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          NODE_ENV: ${{ secrets.NODE_ENV }}
+          NODE_ENV: test
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
-
-      # Wait for server to be ready
-      - name: Wait for server to be ready
-        run: wait-on http://localhost:5001
-
-      # Backend Tests
-      - name: Install Test dependencies
-        working-directory: tests
-        run: npm install
-
-      - name: Run Backend Tests
+      
+      - name: Run Integration Tests
         working-directory: tests
         run: npm run test
         env:
           PORT: 5001
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          NODE_ENV: ${{ secrets.NODE_ENV }}
+          NODE_ENV: test
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
-
-      # Frontend Setup
-      - name: Setup Node.js (Frontend)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Frontend dependencies
-        working-directory: frontend
-        run: npm install
-
-      - name: Build Frontend
-        working-directory: frontend
-        run: npm run build
-        env:
-          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
+      
+      - name: Stop Backend Server
+        if: always()
+        run: |
+          if [ ! -z "$SERVER_PID" ]; then
+            kill $SERVER_PID 2>/dev/null || true
+            kill -9 $SERVER_PID 2>/dev/null || true
+          fi
