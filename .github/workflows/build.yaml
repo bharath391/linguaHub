@@ -2,32 +2,33 @@ name: Build Backend and Frontend
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
-    
+
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+
       # Setup Node.js once for both backend and frontend
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       # Backend Setup
       - name: Install Backend dependencies
         working-directory: backend
         run: npm ci
-      
+
       # Start Backend Server with proper process management
       - name: Start Backend Server
         working-directory: backend
@@ -47,44 +48,52 @@ jobs:
             if [ $elapsed -ge $timeout ]; then
               echo "❌ Server failed to start within $timeout seconds"
               echo "Killing server process..."
+
               kill $SERVER_PID 2>/dev/null || true
               exit 1
             fi
             sleep 2
             elapsed=$((elapsed + 2))
+
             echo "⏳ Waiting... ($elapsed/${timeout}s)"
           done
           
           echo "✅ Server is ready!"
+
         env:
           PORT: 5001
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          NODE_ENV: ${{ secrets.NODE_ENV }}
+          NODE_ENV: test
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
       
+
       # Backend Tests
       - name: Install Test dependencies
         working-directory: tests
         run: npm ci
       
       - name: Run Backend Tests
+
         working-directory: tests
         run: npm run test
         env:
           PORT: 5001
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          NODE_ENV: ${{ secrets.NODE_ENV }}
+          NODE_ENV: test
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
       
+
       # Clean up server process
+
       - name: Stop Backend Server
         if: always()
         run: |
           if [ ! -z "$SERVER_PID" ]; then
+
             echo "Stopping server with PID: $SERVER_PID"
             kill $SERVER_PID 2>/dev/null || true
             # Wait a moment for graceful shutdown
@@ -106,3 +115,4 @@ jobs:
         run: npm run build
         env:
           VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
+
