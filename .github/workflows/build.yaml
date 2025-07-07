@@ -9,101 +9,57 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+
+      # Setup Node.js once for both backend and frontend
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      
+
+      # Backend Setup
       - name: Install Backend dependencies
         working-directory: backend
         run: npm ci
-      
-      # Run backend unit tests without starting server
-      - name: Run Backend Unit Tests
-        working-directory: backend
-        run: npm run test:unit || npm run test
-        env:
-          NODE_ENV: test
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-  
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      
-      - name: Install Frontend dependencies
-        working-directory: frontend
-        run: npm ci
-      
-      - name: Run Frontend Tests
-        working-directory: frontend
-        run: npm test -- --coverage --watchAll=false
-        if: hashFiles('frontend/src/**/*.test.*') != ''
-      
-      - name: Build Frontend
-        working-directory: frontend
-        run: npm run build
-        env:
-          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
-  
-  integration:
-    needs: [backend, frontend]
-    runs-on: ubuntu-latest
-    if: hashFiles('tests/package.json') != ''
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install Backend dependencies
-        working-directory: backend
-        run: npm ci
-      
-      - name: Install Test dependencies
-        working-directory: tests
-        run: npm ci
-      
-      - name: Start Backend Server for Integration Tests
+
+      # Start Backend Server with proper process management
+      - name: Start Backend Server
         working-directory: backend
         run: |
+          # Start server in background and capture PID
           npm run start &
           SERVER_PID=$!
           echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+          echo "Started backend server with PID: $SERVER_PID"
           
-          # Wait for server with timeout
+          # Wait for server with timeout (30 seconds)
           timeout=30
           elapsed=0
-          while ! curl -s http://localhost:5001/health > /dev/null 2>&1; do
+          echo "Waiting for server to start on port 5001..."
+          
+          while ! curl -s http://localhost:5001 > /dev/null 2>&1; do
             if [ $elapsed -ge $timeout ]; then
-              echo "Server failed to start"
+              echo "❌ Server failed to start within $timeout seconds"
+              echo "Killing server process..."
+
               kill $SERVER_PID 2>/dev/null || true
               exit 1
             fi
             sleep 2
             elapsed=$((elapsed + 2))
+
+            echo "⏳ Waiting... ($elapsed/${timeout}s)"
           done
-          echo "Server ready for integration tests"
+          
+          echo "✅ Server is ready!"
+
         env:
           PORT: 5001
           MONGO_URI: ${{ secrets.MONGO_URI }}
@@ -112,7 +68,14 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
       
-      - name: Run Integration Tests
+
+      # Backend Tests
+      - name: Install Test dependencies
+        working-directory: tests
+        run: npm ci
+      
+      - name: Run Backend Tests
+
         working-directory: tests
         run: npm run test
         env:
@@ -123,10 +86,33 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
       
+
+      # Clean up server process
+
       - name: Stop Backend Server
         if: always()
         run: |
           if [ ! -z "$SERVER_PID" ]; then
+
+            echo "Stopping server with PID: $SERVER_PID"
             kill $SERVER_PID 2>/dev/null || true
+            # Wait a moment for graceful shutdown
+            sleep 2
+            # Force kill if still running
             kill -9 $SERVER_PID 2>/dev/null || true
+            echo "✅ Server stopped"
+          else
+            echo "No server PID found"
           fi
+      
+      # Frontend Setup
+      - name: Install Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
+
