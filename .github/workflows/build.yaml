@@ -16,21 +16,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Backend Setup
+      # ──────────────────────────────
+      # 📦 Backend Setup & Server Start
+      # ──────────────────────────────
       - name: Setup Node.js (Backend)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install Backend dependencies
         working-directory: backend
         run: npm install
 
-      # Install wait-on to wait for server readiness
-      - name: Install wait-on
+      - name: Install wait-on globally
         run: npm install -g wait-on
 
-      # Start Backend Server
       - name: Start Backend Server
         working-directory: backend
         run: npm run start &
@@ -42,11 +44,19 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
 
-      # Wait for server to be ready
-      - name: Wait for server to be ready
+      - name: Wait for backend server to be ready
         run: wait-on http://localhost:5001
 
-      # Backend Tests
+      # ──────────────────────────────
+      # ✅ Run Backend Tests
+      # ──────────────────────────────
+      - name: Setup Node.js (Tests)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tests/package-lock.json
+
       - name: Install Test dependencies
         working-directory: tests
         run: npm install
@@ -62,11 +72,15 @@ jobs:
           STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
           STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
 
-      # Frontend Setup
+      # ──────────────────────────────
+      # 🎨 Frontend Build
+      # ──────────────────────────────
       - name: Setup Node.js (Frontend)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend dependencies
         working-directory: frontend
