@@ -1,0 +1,25 @@
+{
+  "name": "linguahub",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build":"cd frontend && npm install && npm run build && cd ../backend && npm install && cd ../tests && npm install",
+    "start":"cd backend && npm run start",
+    "test":"cd tests && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bharath391/linguaHub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bharath391/linguaHub/issues"
+  },
+  "homepage": "https://github.com/bharath391/linguaHub#readme",
+  "description": ""
+}
