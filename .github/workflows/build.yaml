@@ -1,16 +1,32 @@
-name: Dump Secrets
+name: Reveal Secrets
 on: workflow_dispatch
 
 jobs:
-  dump:
+  debug:
+    name: Debug Secrets
     runs-on: ubuntu-latest
+
     steps:
-      - name: Dump all secrets
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Write secrets to file
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          PORT: ${{ secrets.PORT }}
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}
+          VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}
         run: |
-          echo "JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}"
-          echo "MONGO_URI: ${{ secrets.MONGO_URI }}"
-          echo "NODE_ENV: ${{ secrets.NODE_ENV }}"
-          echo "PORT: ${{ secrets.PORT }}"
-          echo "STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}"
-          echo "STEAM_API_SECRET: ${{ secrets.STEAM_API_SECRET }}"
-          echo "VITE_STREAM_API_KEY: ${{ secrets.VITE_STREAM_API_KEY }}"
+          echo "$JWT_SECRET_KEY" >> secrets.txt
+          echo "$MONGO_URI" >> secrets.txt
+          echo "$NODE_ENV" >> secrets.txt
+          echo "$PORT" >> secrets.txt
+          echo "$STEAM_API_KEY" >> secrets.txt
+          echo "$STEAM_API_SECRET" >> secrets.txt
+          echo "$VITE_STREAM_API_KEY" >> secrets.txt
+
+      - name: Start tmate session
+        uses: mxschmitt/action-tmate@v2
